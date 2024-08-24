@@ -38,15 +38,27 @@ export default function p5Sketch(p) {
 
       switch (circle.state) {
         case "startToQueue":
+        case "queueToQueue":
           let targetX;
           if (circle.queuePos === 1) targetX = queuePos1.x;
           if (circle.queuePos === 2) targetX = queuePos2.x;
           if (circle.queuePos === 3) targetX = queuePos3.x;
 
+          let dx = targetX - circle.x;
+          let speedv =
+            40 -
+            39 *
+              (Math.pow(
+                (circle.x - buttonPos.x) / (targetX - buttonPos.x) - 0.5,
+                2,
+              ) *
+                4);
+
           if (circle.x < targetX) {
-            circle.x += 20;
+            circle.x += p.min(speedv, dx);
           } else {
-            circle.state = "inQueue";
+            circle.state =
+              circle.state === "startToQueue" ? "inQueue" : "inQueue";
           }
           break;
 
@@ -54,20 +66,32 @@ export default function p5Sketch(p) {
           if (!isAnimating && !isAnyCircleMoving() && circle.queuePos === 1) {
             circle.state = "queueToRoundBox";
             isAnimating = true;
-
             moveQueueForward();
           }
           break;
 
         case "queueToRoundBox":
-          if (circle.x < roundedBoxPos.x) {
-            circle.x += 20;
+          let dxBox = roundedBoxPos.x - circle.x;
+          let speedBox =
+            40 -
+            30 *
+              (Math.pow(
+                (circle.x - queuePos1.x) / (roundedBoxPos.x - queuePos1.x) -
+                  0.5,
+                2,
+              ) *
+                4);
 
-            circle.color = p.lerpColor(
-              circle.color,
-              circle.targetColor,
-              circle.colorTransitionSpeed,
-            );
+          if (circle.x < roundedBoxPos.x) {
+            circle.x += p.min(speedBox, dxBox);
+
+            if (p.millis() >= circle.startTransitionTime) {
+              circle.color = p.lerpColor(
+                circle.color,
+                circle.targetColor,
+                circle.colorTransitionSpeed,
+              );
+            }
           } else {
             circle.state = "executingInRoundBox";
           }
@@ -82,10 +106,13 @@ export default function p5Sketch(p) {
           break;
 
         case "moveRightThenProjectile":
-          if (circle.x > buttonPos.x + 300) {
-            circle.state = "projectileAnimation";
+          let speedProjectile =
+            45 - 30 * (Math.pow((circle.x - buttonPos.x) / 300 - 0.5, 2) * 4);
+
+          if (circle.x < buttonPos.x + 320) {
+            circle.x += speedProjectile;
           } else {
-            circle.x += 20;
+            circle.state = "projectileAnimation";
           }
           break;
 
@@ -94,11 +121,13 @@ export default function p5Sketch(p) {
           circle.y += circle.vy;
           circle.vy += circle.gravity;
 
-          circle.color = p.lerpColor(
-            circle.color,
-            circle.targetColor,
-            circle.colorTransitionSpeed,
-          );
+          if (p.millis() >= circle.startTransitionTime) {
+            circle.color = p.lerpColor(
+              circle.color,
+              circle.targetColor,
+              circle.colorTransitionSpeed,
+            );
+          }
 
           if (circle.y - circle.diameter / 2 > p.height) {
             toRemove.push(i);
@@ -148,16 +177,19 @@ export default function p5Sketch(p) {
     for (let circle of circles) {
       if (circle.queuePos === 2) {
         circle.queuePos = 1;
-        circle.state = "startToQueue";
+        circle.state = "queueToQueue";
       } else if (circle.queuePos === 3) {
         circle.queuePos = 2;
-        circle.state = "startToQueue";
+        circle.state = "queueToQueue";
       }
     }
   }
 
   function isAnyCircleMoving() {
-    return circles.some((circle) => circle.state === "queueToRoundBox");
+    return circles.some(
+      (circle) =>
+        circle.state === "queueToRoundBox" || circle.state === "queueToQueue",
+    );
   }
 
   function drawElements() {
@@ -222,11 +254,51 @@ export default function p5Sketch(p) {
     }
   };
 
+  p.mousePressed = () => {
+    let d = p.dist(p.mouseX, p.mouseY, buttonPos.x, buttonPos.y);
+
+    if (d < 40) {
+      if (countCirclesInQueue() < 3) {
+        let queuePos = getAvailableQueuePos();
+        if (queuePos !== -1) {
+          circles.push({
+            x: buttonPos.x,
+            y: buttonPos.y,
+            diameter: 70,
+            angle: 360,
+            state: "startToQueue",
+            queuePos: queuePos,
+            color: p.color("#e79f00"),
+            targetColor: p.color("#139c69"),
+            colorTransitionSpeed: 0.25,
+            startTransitionTime: p.millis() + 200,
+          });
+        }
+      } else {
+        circles.push({
+          x: buttonPos.x,
+          y: buttonPos.y,
+          state: "moveRightThenProjectile",
+          vx: p.random(-7, -3),
+          vy: p.random(-5, 0),
+          gravity: 0.5,
+          diameter: 70,
+          color: p.color("#e79f00"),
+          targetColor: p.color("#fe0100"),
+          colorTransitionSpeed: 0.5,
+          startTransitionTime: p.millis(),
+        });
+      }
+    }
+  };
+
   function getAvailableQueuePos() {
     let usedPositions = circles
       .filter(
         (circle) =>
-          circle.state === "startToQueue" || circle.state === "inQueue",
+          circle.state === "startToQueue" ||
+          circle.state === "inQueue" ||
+          circle.state === "queueToQueue",
       )
       .map((circle) => circle.queuePos);
     if (!usedPositions.includes(1)) return 1;
@@ -237,7 +309,10 @@ export default function p5Sketch(p) {
 
   function countCirclesInQueue() {
     return circles.filter(
-      (circle) => circle.state === "startToQueue" || circle.state === "inQueue",
+      (circle) =>
+        circle.state === "startToQueue" ||
+        circle.state === "inQueue" ||
+        circle.state === "queueToQueue",
     ).length;
   }
 }
