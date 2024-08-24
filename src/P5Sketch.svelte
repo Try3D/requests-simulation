@@ -2,6 +2,12 @@
   import { onMount } from "svelte";
   import p5 from "p5";
   import p5Sketch from "./lib/sketch";
+  import {
+    processedPackets,
+    queueLength,
+    droppedPackets,
+    serverStatus,
+  } from "./lib/stores";
 
   let sketchRef;
 
@@ -15,11 +21,91 @@
   });
 </script>
 
-<div bind:this={sketchRef}></div>
+<main bind:this={sketchRef}></main>
+
+<div class="status-box">
+  <div class="status-header">
+    <span class="status-title">Server Status</span>
+    <div
+      class="status-indicator"
+      style="background-color: {$serverStatus == 'Idle'
+        ? '#139c69'
+        : '#e84143'}"
+    ></div>
+  </div>
+  <div class="detail-row">
+    <span>Processed Packets:</span>
+    <span>{$processedPackets}</span>
+  </div>
+  <div class="detail-row">
+    <span>Dropped Packets:</span>
+    <span>{$droppedPackets}</span>
+  </div>
+  <div class="status-details">
+    <div class="detail-row">
+      <span>Queue Length:</span>
+      <span>{$queueLength}</span>
+    </div>
+    <div class="detail-row">
+      <span>Server Status:</span>
+      <span>{$serverStatus}</span>
+    </div>
+  </div>
+</div>
 
 <style>
-  div {
+  main {
     border: 3px solid black;
     box-shadow: 10px 10px 0px 0px #000;
+  }
+
+  .status-box {
+    background-color: white;
+    color: black;
+    padding: 16px;
+    width: 300px;
+    margin: 40px auto;
+    font-family: "Inter", sans-serif;
+    text-align: left;
+    border: 2px solid black;
+    box-shadow: 5px 5px 0px 0px #000;
+  }
+
+  .status-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    font-size: 30px;
+  }
+
+  .status-title {
+    font-weight: bold;
+    padding: 4px;
+    border-radius: 4px;
+  }
+
+  .status-indicator {
+    width: 15px;
+    height: 15px;
+    border-radius: 50%;
+    margin-right: 5px;
+  }
+
+  .status-details {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .detail-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    font-size: 1em;
+  }
+
+  .detail-row span {
+    padding: 2px 4px;
+    border-radius: 4px;
   }
 </style>

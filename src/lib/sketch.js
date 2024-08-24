@@ -1,6 +1,14 @@
 import p5 from "p5";
+import {
+  processedPackets,
+  queueLength,
+  droppedPackets,
+  serverStatus,
+} from "./stores";
 
-/** @param {p5} p */
+/**
+ * @param {p5} p
+ */
 export default function p5Sketch(p) {
   let buttonPos;
   let pillPos;
@@ -29,6 +37,7 @@ export default function p5Sketch(p) {
   p.draw = () => {
     p.background("#ffffff");
 
+    updateQueueLength();
     drawElements();
 
     let toRemove = [];
@@ -98,8 +107,11 @@ export default function p5Sketch(p) {
           break;
 
         case "executingInRoundBox":
+          serverStatus.set("Processing");
           circle.angle = (circle.angle || 360) - 5;
           if (circle.angle <= 5) {
+            processedPackets.update((n) => n + 1);
+            serverStatus.set("Idle");
             isAnimating = false;
             toRemove.push(i);
           }
@@ -112,6 +124,7 @@ export default function p5Sketch(p) {
           if (circle.x < buttonPos.x + 320) {
             circle.x += speedProjectile;
           } else {
+            droppedPackets.update((n) => n + 1);
             circle.state = "projectileAnimation";
           }
           break;
@@ -234,42 +247,6 @@ export default function p5Sketch(p) {
             queuePos: queuePos,
             color: p.color("#e79f00"),
             targetColor: p.color("#139c69"),
-            colorTransitionSpeed: 1,
-          });
-        }
-      } else {
-        circles.push({
-          x: buttonPos.x,
-          y: buttonPos.y,
-          state: "moveRightThenProjectile",
-          vx: p.random(-7, -3),
-          vy: p.random(-5, 0),
-          gravity: 0.5,
-          diameter: 70,
-          color: p.color("#e79f00"),
-          targetColor: p.color("#fe0100"),
-          colorTransitionSpeed: 1,
-        });
-      }
-    }
-  };
-
-  p.mousePressed = () => {
-    let d = p.dist(p.mouseX, p.mouseY, buttonPos.x, buttonPos.y);
-
-    if (d < 40) {
-      if (countCirclesInQueue() < 3) {
-        let queuePos = getAvailableQueuePos();
-        if (queuePos !== -1) {
-          circles.push({
-            x: buttonPos.x,
-            y: buttonPos.y,
-            diameter: 70,
-            angle: 360,
-            state: "startToQueue",
-            queuePos: queuePos,
-            color: p.color("#e79f00"),
-            targetColor: p.color("#139c69"),
             colorTransitionSpeed: 0.25,
             startTransitionTime: p.millis() + 200,
           });
@@ -314,5 +291,10 @@ export default function p5Sketch(p) {
         circle.state === "inQueue" ||
         circle.state === "queueToQueue",
     ).length;
+  }
+
+  function updateQueueLength() {
+    let length = countCirclesInQueue();
+    queueLength.set(length);
   }
 }
