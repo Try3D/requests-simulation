@@ -107,11 +107,11 @@ export default function p5Sketch(p) {
           break;
 
         case "executingInRoundBox":
-          serverStatus.set("Processing");
+          serverStatus.set(1);
           circle.angle = (circle.angle || 360) - 5;
           if (circle.angle <= 5) {
             processedPackets.update((n) => n + 1);
-            serverStatus.set("Idle");
+            serverStatus.set(0);
             isAnimating = false;
             toRemove.push(i);
           }

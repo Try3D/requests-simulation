@@ -10,6 +10,21 @@
   } from "./lib/stores";
 
   let sketchRef;
+  let color = "#e84143";
+  let latestTimeout;
+
+  $: {
+    console.log($serverStatus);
+    if ($serverStatus === 0) {
+      clearTimeout(latestTimeout);
+      latestTimeout = setTimeout(() => {
+        color = "#e84143";
+      }, 1000);
+    } else {
+      clearTimeout(latestTimeout);
+      color = "#139c69";
+    }
+  }
 
   onMount(() => {
     const sketch = p5Sketch;
@@ -26,12 +41,7 @@
 <div class="status-box">
   <div class="status-header">
     <span class="status-title">Server Status</span>
-    <div
-      class="status-indicator"
-      style="background-color: {$serverStatus == 'Idle'
-        ? '#139c69'
-        : '#e84143'}"
-    ></div>
+    <div class="status-indicator" style="background-color: {color}"></div>
   </div>
   <div class="detail-row">
     <span>Processed Packets:</span>
@@ -48,7 +58,7 @@
     </div>
     <div class="detail-row">
       <span>Server Status:</span>
-      <span>{$serverStatus}</span>
+      <span>{$serverStatus == 0 ? "Idle" : "Processing"}</span>
     </div>
   </div>
 </div>
